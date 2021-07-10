@@ -1,6 +1,18 @@
 const { spawn } = require('child_process');
 const csvParse = require('csv-parse');
 
+// --------
+
+// check if beets is installed
+// ask if user already has beets library set up
+// if no:
+//    get arguments for music dir, beets config file, etc
+//    write beets config yaml
+//    run beet import
+// run beet export into csv parser
+
+// --------
+
 const output = [];
 const parser = csvParse({delimiter: ','});
 
@@ -21,7 +33,7 @@ parser.on('end', function(){
   process.exit(0);
 })
 
-const cmd = spawn('beet', ['export', '-f', 'csv', '-i', 'title', 'artist:amon']);
+const cmd = spawn('beet', ['export', '-f', 'csv', '-i', 'title', 'title::.*']);
 
 cmd.stdout.on('data', (chunk) => {
   console.log(`writing chunk: \n\n${chunk}`);
@@ -33,4 +45,4 @@ cmd.on('close', () => {
   parser.end();
 })
 
-setInterval(() => {}, 1 << 30);
+
