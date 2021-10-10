@@ -7,6 +7,7 @@ Updates your music collection CSV file ([example](https://github.com/FOSSforlife
 ```bash
  patrician update # Updates from all sources
  patrician update {rym,lastfm,...} # Updates from the specified source
+ patrician add [album name or URL] # Coming soon!
 ```
 
 # Supported Sources
