@@ -2,8 +2,6 @@
 
 import { CliConfig, Collection, Identifier, Item, ItemUpdates, updaters, UpdaterString } from './types';
 import fs from 'fs';
-import csvParse from 'csv-parse';
-import csvStringify from 'csv-stringify';
 import { readCollectionFile, writeCollectionFile } from './util/csv';
 
 // TODO: Store in global config file
@@ -28,11 +26,10 @@ const isValidUpdater = (cliParam: string): cliParam is UpdaterString => {
 };
 
 function itemMatchesIdentifier(item: Item, identifier: Identifier) {
-	return identifier.idType === 'rymId' && item.RYMID === identifier.value;
+	return identifier.idType === 'rymId' && Number(item.RYMID) === Number(identifier.value);
 }
 
 function applyItemUpdates(collection: Collection, itemUpdates: ItemUpdates): Collection {
-	const newCollection: Collection = itemUpdates.newItems;
 	const oldItemsUpdated = collection.map((item) => {
 		const singleItemUpdate = itemUpdates.updatedItems.find((itemDiff) =>
 			itemMatchesIdentifier(item, itemDiff.identifier)
@@ -46,9 +43,11 @@ function applyItemUpdates(collection: Collection, itemUpdates: ItemUpdates): Col
 			Title: singleItemUpdate.newData.Title ?? item.Title,
 			ReleaseDate: singleItemUpdate.newData.ReleaseDate ?? item.ReleaseDate,
 			RYMID: singleItemUpdate.newData.RYMID ?? item.RYMID,
+			Rating: singleItemUpdate.newData.Rating ?? item.Rating,
+			MBID: singleItemUpdate.newData.MBID ?? item.MBID,
 		};
 	});
-	newCollection.concat(...oldItemsUpdated);
+	const newCollection = itemUpdates.newItems.concat(...oldItemsUpdated);
 	return newCollection;
 }
 
@@ -83,7 +82,6 @@ function applyItemUpdates(collection: Collection, itemUpdates: ItemUpdates): Col
 				fs.writeFileSync('item-updates.json', JSON.stringify(itemUpdates, undefined, 2));
 				const newCollection = applyItemUpdates(collection, itemUpdates);
 				await writeCollectionFile('albums-new.csv', newCollection);
-
 				break;
 			default:
 				throw new Error('No subcommand given.');

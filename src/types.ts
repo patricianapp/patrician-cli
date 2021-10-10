@@ -12,7 +12,9 @@ export interface Item {
 	Artist: string;
 	Title: string;
 	RYMID?: string;
-	ReleaseDate: string;
+	MBID?: string;
+	ReleaseDate?: string;
+	Rating?: string;
 }
 
 export type Collection = Array<Item>;

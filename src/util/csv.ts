@@ -51,7 +51,7 @@ export async function writeCollectionFile(collectionFile: string, collection: Co
 			resolve();
 		});
 
-		const sortedCollection = collection.sort((a, b) => {
+		collection.sort((a, b) => {
 			if (a.Artist.toLowerCase() < b.Artist.toLowerCase()) {
 				return -1;
 			} else if (a.Artist.toLowerCase() > b.Artist.toLowerCase()) {
@@ -59,6 +59,10 @@ export async function writeCollectionFile(collectionFile: string, collection: Co
 			} else return a.Title.toLowerCase() < b.Title.toLowerCase() ? -1 : 1;
 		});
 		for (const item of collection) {
+			// Need to do this for all optional params
+			if (!item.MBID) {
+				item.MBID = '';
+			}
 			stringifier.write(item);
 		}
 		stringifier.end();

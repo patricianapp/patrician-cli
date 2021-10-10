@@ -41,6 +41,7 @@ export class RYMUpdater {
 
 	private itemDiff(sourceItem: RYMItem, collectionItem: Item): ItemDiff {
 		const isDateDifferent = sourceItem.Release_Date !== collectionItem.ReleaseDate;
+		const isRatingDifferent = sourceItem.Rating !== collectionItem.Rating;
 		return {
 			identifier: {
 				idType: 'rymId',
@@ -48,9 +49,11 @@ export class RYMUpdater {
 			},
 			oldData: {
 				ReleaseDate: isDateDifferent ? collectionItem.ReleaseDate : undefined,
+				Rating: isRatingDifferent ? collectionItem.Rating : undefined,
 			},
 			newData: {
 				ReleaseDate: isDateDifferent ? sourceItem.Release_Date : undefined,
+				Rating: isRatingDifferent ? sourceItem.Rating : undefined,
 			},
 		};
 	}
@@ -64,6 +67,7 @@ export class RYMUpdater {
 			Title: sourceItem.Title,
 			ReleaseDate: sourceItem.Release_Date,
 			RYMID: sourceItem['RYM Album'],
+			Rating: sourceItem.Rating,
 		};
 	}
 
