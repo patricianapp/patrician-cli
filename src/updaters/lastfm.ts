@@ -2,7 +2,7 @@ import { CliConfig, Collection, Identifier, Item, ItemUpdates, SingleItemUpdates
 import LastFm from '@toplast/lastfm';
 import { IAlbum } from '@toplast/lastfm/lib/common/common.interface';
 import fs from 'fs';
-import { IUserGetTopAlbums } from '@toplast/lastfm/lib/modules/user/user.interface';
+import { createAmazonFilter, MetadataFilter } from 'metadata-filter';
 
 export function updateItemInPlaceIfMatching(sourceItem: IAlbum, collectionItem: Item): SingleItemUpdates | null {
 	let matchingIdentifier: Identifier['idType'];
@@ -64,6 +64,7 @@ export function newItem(sourceItem: IAlbum): Item {
 export class LastFmUpdater {
 	private lastfmConfig: CliConfig['sources']['lastfm'];
 	private itemUpdates: ItemUpdates;
+	private metadataFilter: MetadataFilter;
 
 	constructor(config: CliConfig, private collection: Collection) {
 		this.lastfmConfig = config.sources.lastfm;
@@ -71,17 +72,18 @@ export class LastFmUpdater {
 			newItems: [],
 			updatedItems: [],
 		};
+		this.metadataFilter = createAmazonFilter();
 	}
 
 	async update(): Promise<{ itemUpdates: ItemUpdates }> {
 		const lastFm = new LastFm(this.lastfmConfig.apiKey);
-		const totalAlbumsTest = [];
 
 		let continueFetching = true;
 		let page = 1;
 		while (continueFetching) {
 			// const albums = await lastFm.user.getTopAlbums({ user: this.lastfmConfig.username, page });
 			const albums = {
+				// Use cache for testing
 				topalbums: {
 					album: JSON.parse(fs.readFileSync('lastfm-albums').toString()) as Array<IAlbum>,
 				},
@@ -90,7 +92,9 @@ export class LastFmUpdater {
 			// console.log(albums.topalbums['@attr']);
 			let singleItemUpdates: SingleItemUpdates | null = null;
 			for (const album of albums.topalbums.album) {
-				totalAlbumsTest.push(album);
+				if (album.name) {
+					album.name = this.metadataFilter.filterField('album', album.name).trim();
+				}
 				for (const collectionItem of this.collection) {
 					singleItemUpdates = updateItemInPlaceIfMatching(album, collectionItem);
 					if (singleItemUpdates !== null) {
@@ -110,7 +114,6 @@ export class LastFmUpdater {
 			page++;
 		}
 
-		fs.writeFileSync('lastfm-albums', JSON.stringify(totalAlbumsTest, undefined, 2));
 		return { itemUpdates: this.itemUpdates };
 	}
 }
