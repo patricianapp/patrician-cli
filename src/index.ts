@@ -32,8 +32,15 @@ const isValidUpdater = (cliParam: string): cliParam is Source => {
 				const collection = await readCollectionFile(config.collectionFile);
 				if (options[0] && !options[0].startsWith('--')) {
 					if (isValidUpdater(options[0])) {
-						const updater = updaters[options[0]];
-						// updater.update(options.slice(1));
+						const updaterString = options[0];
+						const updaterClass = updaters[updaterString];
+						const updaterInstance = new updaterClass(config, collection);
+						const itemUpdates = {
+							[updaterString]: (await updaterInstance.update()).itemUpdates,
+						};
+						fs.writeFileSync('item-updates.json', JSON.stringify(itemUpdates, undefined, 2));
+						await writeCollectionFile('albums-new.csv', collection);
+						break;
 					} else {
 						throw new Error(
 							`${options[0]} is not a valid updater. Try one of [${Object.keys(updaters).join(
