@@ -3,14 +3,18 @@
 import { CliConfig, Collection, Identifier, Item, ItemUpdates, updaters, Source } from './types';
 import fs from 'fs';
 import { readCollectionFile, writeCollectionFile } from './util/csv';
+import dotenv from 'dotenv';
+dotenv.config();
 
 // TODO: Store in global config file
 const config: CliConfig = {
 	collectionFile: './albums.csv',
-	enabledUpdaters: ['rym'],
+	enabledUpdaters: ['rym', 'lastfm'],
 	sources: {
 		lastfm: {
 			username: 'elias-jackson2',
+			apiKey: process.env.LASTFM_API_KEY ?? '',
+			playsThreshold: 100,
 		},
 		rym: {
 			filename: './user_albums_export.txt',

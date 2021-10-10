@@ -14,7 +14,9 @@
 	"author": "",
 	"license": "ISC",
 	"dependencies": {
+		"@toplast/lastfm": "0.1.5",
 		"csv": "^5.5.3",
+		"dotenv": "^10.0.0",
 		"env-paths": "^2.2.1"
 	},
 	"devDependencies": {

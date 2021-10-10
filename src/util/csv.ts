@@ -1,4 +1,4 @@
-import { CliConfig, Collection, Identifier, Item, ItemUpdates, updaters, Source } from '../types';
+import { Collection, Item } from '../types';
 import fs from 'fs';
 import csvParse from 'csv-parse';
 import csvStringify from 'csv-stringify';
@@ -35,6 +35,7 @@ export async function writeCollectionFile(collectionFile: string, collection: Co
 			header: true,
 			quoted_string: true,
 		});
+
 		stringifier.on('readable', () => {
 			let row: string;
 			while ((row = stringifier.read())) {
@@ -60,9 +61,9 @@ export async function writeCollectionFile(collectionFile: string, collection: Co
 			} else return a.Title.toLowerCase() < b.Title.toLowerCase() ? -1 : 1;
 		});
 		for (const item of collection) {
-			// Need to do this for all optional params
-			if (!item.MBID) {
-				item.MBID = '';
+			// Convert all values to strings
+			for (const field of ['RYMID', 'MBID', 'ReleaseDate', 'Rating', 'Plays']) {
+				item[field as keyof Item] = `${item[field as keyof Item] ?? ''}`;
 			}
 			stringifier.write(item);
 		}

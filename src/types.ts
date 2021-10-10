@@ -15,6 +15,7 @@ export interface Item {
 	MBID?: string;
 	ReleaseDate?: string;
 	Rating?: string;
+	Plays?: string;
 }
 
 export type Collection = Array<Item>;
@@ -49,6 +50,8 @@ export interface CliConfig {
 	sources: {
 		lastfm: {
 			username: string;
+			apiKey: string;
+			playsThreshold: number;
 		};
 		rym: {
 			filename: string;

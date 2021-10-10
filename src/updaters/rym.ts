@@ -81,25 +81,6 @@ export function updateItemInPlaceIfMatching(sourceItem: RYMItem, collectionItem:
 	};
 }
 
-export function itemDiff(sourceItem: RYMItem, collectionItem: Item): ItemDiff {
-	const isDateDifferent = sourceItem.Release_Date !== collectionItem.ReleaseDate;
-	const isRatingDifferent = sourceItem.Rating !== collectionItem.Rating;
-	return {
-		identifier: {
-			idType: 'rymId',
-			value: sourceItem['RYM Album'],
-		},
-		oldData: {
-			ReleaseDate: isDateDifferent ? collectionItem.ReleaseDate : undefined,
-			Rating: isRatingDifferent ? collectionItem.Rating : undefined,
-		},
-		newData: {
-			ReleaseDate: isDateDifferent ? sourceItem.Release_Date : undefined,
-			Rating: isRatingDifferent ? sourceItem.Rating : undefined,
-		},
-	};
-}
-
 export function newItem(sourceItem: RYMItem): Item {
 	const sourceArtist = sourceItem['First Name']
 		? `${sourceItem['First Name']} ${sourceItem['Last Name']}`
@@ -125,7 +106,6 @@ export class RYMUpdater {
 		};
 	}
 
-	// Diffs source and collection file
 	async update(): Promise<{ itemUpdates: ItemUpdates }> {
 		return new Promise((resolve, reject) => {
 			const readStream = fs.createReadStream(this.rymFilename);
