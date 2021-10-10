@@ -71,7 +71,7 @@ export class RYMUpdater {
 	async fetchUpdates(): Promise<ItemUpdates> {
 		return new Promise((resolve, reject) => {
 			const readStream = fs.createReadStream(this.rymFilename);
-			const parser = csvParse({ delimiter: ',', quote: '"', ltrim: true, rtrim: true });
+			const parser = csvParse({ columns: true, delimiter: ',', quote: '"', ltrim: true, rtrim: true });
 
 			parser.on('readable', () => {
 				let record: RYMItem;
@@ -82,6 +82,7 @@ export class RYMUpdater {
 					if (matchingCollectionItem) {
 						this.itemUpdates.updatedItems.push(this.itemDiff(record, matchingCollectionItem));
 					} else {
+						// console.log(record.Title);
 						this.itemUpdates.newItems.push(this.newItem(record));
 					}
 				}

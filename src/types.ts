@@ -11,7 +11,7 @@ export type UpdaterString = keyof typeof updaters;
 export interface Item {
 	Artist: string;
 	Title: string;
-	RYMID: string;
+	RYMID?: string;
 	ReleaseDate: string;
 }
 

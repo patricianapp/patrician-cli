@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
-import { CliConfig, Collection, Item, ItemUpdates, updaters, UpdaterString } from './types';
+import { CliConfig, Collection, Identifier, Item, ItemUpdates, updaters, UpdaterString } from './types';
 import fs from 'fs';
 import csvParse from 'csv-parse';
+import csvStringify from 'csv-stringify';
 
 // TODO: Store in global config file
 const config: CliConfig = {
@@ -49,6 +50,61 @@ async function getCollection(): Promise<Collection> {
 	});
 }
 
+async function collectionToCsvString(collection: Collection): Promise<string> {
+	return new Promise((resolve, reject) => {
+		const csvRows: Array<string> = [];
+		const stringifier = csvStringify({
+			delimiter: ',',
+			header: true,
+		});
+		stringifier.on('readable', () => {
+			let row: string;
+			while ((row = stringifier.read())) {
+				csvRows.push(row);
+				console.log(csvRows[0].toString().slice(0, 50));
+			}
+		});
+
+		stringifier.on('error', (err) => {
+			reject(err);
+		});
+
+		stringifier.on('finish', () => {
+			resolve(csvRows.map((b) => b.toString()).join('\n'));
+		});
+
+		for (const item of collection) {
+			stringifier.write(item);
+		}
+		stringifier.end();
+	});
+}
+
+function itemMatchesIdentifier(item: Item, identifier: Identifier) {
+	return identifier.idType === 'rymId' && item.RYMID === identifier.value;
+}
+
+function applyUpdates(collection: Collection, itemUpdates: ItemUpdates): Collection {
+	const newCollection: Collection = itemUpdates.newItems;
+	const oldItemsUpdated = collection.map((item) => {
+		const singleItemUpdate = itemUpdates.updatedItems.find((itemDiff) =>
+			itemMatchesIdentifier(item, itemDiff.identifier)
+		);
+		if (!singleItemUpdate) {
+			return item;
+		}
+		// for now, just replace old data
+		return {
+			Artist: singleItemUpdate.newData.Artist ?? item.Artist,
+			Title: singleItemUpdate.newData.Title ?? item.Title,
+			ReleaseDate: singleItemUpdate.newData.ReleaseDate ?? item.ReleaseDate,
+			RYMID: singleItemUpdate.newData.RYMID ?? item.RYMID,
+		};
+	});
+	newCollection.concat(...oldItemsUpdated);
+	return newCollection;
+}
+
 (async () => {
 	try {
 		switch (command) {
@@ -78,6 +134,10 @@ async function getCollection(): Promise<Collection> {
 					itemUpdates.updatedItems = itemUpdates.updatedItems.concat(updatedItems);
 				}
 				fs.writeFileSync('item-updates.json', JSON.stringify(itemUpdates, undefined, 2));
+				const newCollection = applyUpdates(collection, itemUpdates);
+				const csvString = await collectionToCsvString(newCollection);
+				fs.writeFileSync('albums-new.csv', csvString);
+
 				break;
 			default:
 				throw new Error('No subcommand given.');
