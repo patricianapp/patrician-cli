@@ -28,8 +28,8 @@ export function updateItemInPlaceIfMatching(sourceItem: IAlbum, collectionItem: 
 		return null;
 	}
 
-	newData.Plays = sourceItem.playcount!;
-	for (let [field, value] of Object.entries(newData)) {
+	newData.Plays = sourceItem.playcount;
+	for (const [field, value] of Object.entries(newData)) {
 		collectionItem[field as keyof Item] = value;
 	}
 

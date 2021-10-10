@@ -25,12 +25,6 @@ export interface Identifier {
 	value: string;
 }
 
-export interface ItemDiff {
-	identifier: Identifier;
-	oldData: Partial<Item>;
-	newData: Partial<Item>;
-}
-
 export interface SingleItemUpdates {
 	matchingIdentifier: Identifier['idType'];
 	identifiers: Array<Identifier>;

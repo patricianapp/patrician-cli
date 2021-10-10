@@ -1,4 +1,4 @@
-import { CliConfig, Collection, Identifier, Item, ItemDiff, SingleItemUpdates, ItemUpdates } from '../types';
+import { CliConfig, Collection, Identifier, Item, SingleItemUpdates, ItemUpdates } from '../types';
 import csvParse from 'csv-parse';
 import fs from 'fs';
 
@@ -15,17 +15,6 @@ interface RYMItem {
 	'Purchase Date': string;
 	'Media Type': string;
 	Review: string;
-}
-
-export function doesItemMatch(sourceItem: RYMItem, collectionItem: Item) {
-	const sourceArtist = sourceItem['First Name']
-		? `${sourceItem['First Name']} ${sourceItem['Last Name']}`
-		: sourceItem['Last Name'];
-
-	return (
-		sourceItem['RYM Album'] === collectionItem.RYMID ||
-		(sourceArtist === collectionItem.Artist && sourceItem.Title === collectionItem.Title)
-	);
 }
 
 export function updateItemInPlaceIfMatching(sourceItem: RYMItem, collectionItem: Item): SingleItemUpdates | null {
@@ -59,7 +48,7 @@ export function updateItemInPlaceIfMatching(sourceItem: RYMItem, collectionItem:
 	}
 
 	// for now, just replace with new data
-	for (let [field, value] of Object.entries(newData)) {
+	for (const [field, value] of Object.entries(newData)) {
 		collectionItem[field as keyof Item] = value;
 	}
 
@@ -135,6 +124,10 @@ export class RYMUpdater {
 
 			parser.on('end', () => {
 				resolve({ itemUpdates: this.itemUpdates });
+			});
+
+			parser.on('error', (err) => {
+				reject(err);
 			});
 			readStream.pipe(parser);
 		});

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { CliConfig, Collection, Identifier, Item, ItemUpdates, updaters, Source } from './types';
+import { CliConfig, ItemUpdates, updaters, Source } from './types';
 import fs from 'fs';
 import { readCollectionFile, writeCollectionFile } from './util/csv';
 import dotenv from 'dotenv';
@@ -32,7 +32,7 @@ const isValidUpdater = (cliParam: string): cliParam is Source => {
 (async () => {
 	try {
 		switch (command) {
-			case 'update':
+			case 'update': {
 				const collection = await readCollectionFile(config.collectionFile);
 				if (options[0] && !options[0].startsWith('--')) {
 					if (isValidUpdater(options[0])) {
@@ -62,6 +62,7 @@ const isValidUpdater = (cliParam: string): cliParam is Source => {
 				fs.writeFileSync('item-updates.json', JSON.stringify(itemUpdates, undefined, 2));
 				await writeCollectionFile('albums-new.csv', collection);
 				break;
+			}
 			default:
 				throw new Error('No subcommand given.');
 		}
