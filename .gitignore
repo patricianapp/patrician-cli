@@ -116,3 +116,7 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+albums.csv
+user_albums_export.txt
+item-updates.json
