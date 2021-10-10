@@ -1,4 +1,4 @@
-import { CliConfig, Collection, Identifier, Item, ItemUpdates, updaters, UpdaterString } from '../types';
+import { CliConfig, Collection, Identifier, Item, ItemUpdates, updaters, Source } from '../types';
 import fs from 'fs';
 import csvParse from 'csv-parse';
 import csvStringify from 'csv-stringify';
@@ -33,6 +33,7 @@ export async function writeCollectionFile(collectionFile: string, collection: Co
 		const stringifier = csvStringify({
 			delimiter: ',',
 			header: true,
+			quoted_string: true,
 		});
 		stringifier.on('readable', () => {
 			let row: string;
@@ -46,7 +47,7 @@ export async function writeCollectionFile(collectionFile: string, collection: Co
 		});
 
 		stringifier.on('finish', () => {
-			const csvString = csvRows.join('\n');
+			const csvString = csvRows.join('');
 			fs.writeFileSync(collectionFile, csvString);
 			resolve();
 		});

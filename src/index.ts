@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { CliConfig, Collection, Identifier, Item, ItemUpdates, updaters, UpdaterString } from './types';
+import { CliConfig, Collection, Identifier, Item, ItemUpdates, updaters, Source } from './types';
 import fs from 'fs';
 import { readCollectionFile, writeCollectionFile } from './util/csv';
 
@@ -21,35 +21,9 @@ const config: CliConfig = {
 const command = process.argv[2];
 const options = process.argv.slice(3);
 
-const isValidUpdater = (cliParam: string): cliParam is UpdaterString => {
+const isValidUpdater = (cliParam: string): cliParam is Source => {
 	return Object.keys(updaters).includes(cliParam);
 };
-
-function itemMatchesIdentifier(item: Item, identifier: Identifier) {
-	return identifier.idType === 'rymId' && Number(item.RYMID) === Number(identifier.value);
-}
-
-function applyItemUpdates(collection: Collection, itemUpdates: ItemUpdates): Collection {
-	const oldItemsUpdated = collection.map((item) => {
-		const singleItemUpdate = itemUpdates.updatedItems.find((itemDiff) =>
-			itemMatchesIdentifier(item, itemDiff.identifier)
-		);
-		if (!singleItemUpdate) {
-			return item;
-		}
-		// for now, just replace old data
-		return {
-			Artist: singleItemUpdate.newData.Artist ?? item.Artist,
-			Title: singleItemUpdate.newData.Title ?? item.Title,
-			ReleaseDate: singleItemUpdate.newData.ReleaseDate ?? item.ReleaseDate,
-			RYMID: singleItemUpdate.newData.RYMID ?? item.RYMID,
-			Rating: singleItemUpdate.newData.Rating ?? item.Rating,
-			MBID: singleItemUpdate.newData.MBID ?? item.MBID,
-		};
-	});
-	const newCollection = itemUpdates.newItems.concat(...oldItemsUpdated);
-	return newCollection;
-}
 
 (async () => {
 	try {
@@ -68,20 +42,14 @@ function applyItemUpdates(collection: Collection, itemUpdates: ItemUpdates): Col
 						);
 					}
 				}
-				const itemUpdates: ItemUpdates = {
-					newItems: [],
-					updatedItems: [],
-				};
+				const itemUpdates: Record<string, ItemUpdates> = {};
 				for (const updaterString of config.enabledUpdaters) {
 					const updaterClass = updaters[updaterString];
 					const updaterInstance = new updaterClass(config, collection);
-					const { newItems, updatedItems } = await updaterInstance.fetchUpdates();
-					itemUpdates.newItems = itemUpdates.newItems.concat(newItems);
-					itemUpdates.updatedItems = itemUpdates.updatedItems.concat(updatedItems);
+					itemUpdates[updaterString] = (await updaterInstance.update()).itemUpdates;
 				}
 				fs.writeFileSync('item-updates.json', JSON.stringify(itemUpdates, undefined, 2));
-				const newCollection = applyItemUpdates(collection, itemUpdates);
-				await writeCollectionFile('albums-new.csv', newCollection);
+				await writeCollectionFile('albums-new.csv', collection);
 				break;
 			default:
 				throw new Error('No subcommand given.');

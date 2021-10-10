@@ -6,7 +6,7 @@ export const updaters = {
 	lastfm: LastFmUpdater,
 };
 
-export type UpdaterString = keyof typeof updaters;
+export type Source = keyof typeof updaters;
 
 export interface Item {
 	Artist: string;
@@ -30,14 +30,22 @@ export interface ItemDiff {
 	newData: Partial<Item>;
 }
 
+export interface SingleItemUpdates {
+	matchingIdentifier: Identifier['idType'];
+	identifiers: Array<Identifier>;
+	source: Source;
+	oldData: Partial<Item>;
+	newData: Partial<Item>;
+}
+
 export interface ItemUpdates {
 	newItems: Array<Item>;
-	updatedItems: Array<ItemDiff>;
+	updatedItems: Array<SingleItemUpdates>;
 }
 
 export interface CliConfig {
 	collectionFile: string;
-	enabledUpdaters: Array<UpdaterString>;
+	enabledUpdaters: Array<Source>;
 	sources: {
 		lastfm: {
 			username: string;

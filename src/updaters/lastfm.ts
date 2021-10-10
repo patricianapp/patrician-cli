@@ -1,4 +1,4 @@
-import { CliConfig, ItemUpdates } from '../types';
+import { CliConfig, Collection, ItemUpdates } from '../types';
 
 export class LastFmUpdater {
 	private filename: string;
@@ -8,11 +8,14 @@ export class LastFmUpdater {
 	}
 
 	// Diffs source and collection file
-	async fetchUpdates(): Promise<ItemUpdates> {
+	async update(): Promise<{ newCollection: Collection; itemUpdates: ItemUpdates }> {
 		return new Promise((resolve, reject) => {
 			resolve({
-				newItems: [],
-				updatedItems: [],
+				newCollection: [],
+				itemUpdates: {
+					newItems: [],
+					updatedItems: [],
+				},
 			});
 		});
 	}
