@@ -17,6 +17,48 @@ interface RYMItem {
 	Review: string;
 }
 
+export function doesItemMatch(sourceItem: RYMItem, collectionItem: Item): boolean {
+	const sourceArtist = sourceItem['First Name']
+		? `${sourceItem['First Name']} ${sourceItem['Last Name']}`
+		: sourceItem['Last Name'];
+	return (
+		sourceItem['RYM Album'] === collectionItem.RYMID ||
+		(sourceArtist === collectionItem.Artist && sourceItem.Title === collectionItem.Title)
+	);
+}
+
+export function itemDiff(sourceItem: RYMItem, collectionItem: Item): ItemDiff {
+	const isDateDifferent = sourceItem.Release_Date !== collectionItem.ReleaseDate;
+	const isRatingDifferent = sourceItem.Rating !== collectionItem.Rating;
+	return {
+		identifier: {
+			idType: 'rymId',
+			value: sourceItem['RYM Album'],
+		},
+		oldData: {
+			ReleaseDate: isDateDifferent ? collectionItem.ReleaseDate : undefined,
+			Rating: isRatingDifferent ? collectionItem.Rating : undefined,
+		},
+		newData: {
+			ReleaseDate: isDateDifferent ? sourceItem.Release_Date : undefined,
+			Rating: isRatingDifferent ? sourceItem.Rating : undefined,
+		},
+	};
+}
+
+export function newItem(sourceItem: RYMItem): Item {
+	const sourceArtist = sourceItem['First Name']
+		? `${sourceItem['First Name']} ${sourceItem['Last Name']}`
+		: sourceItem['Last Name'];
+	return {
+		Artist: sourceArtist,
+		Title: sourceItem.Title,
+		ReleaseDate: sourceItem.Release_Date,
+		RYMID: sourceItem['RYM Album'],
+		Rating: sourceItem.Rating,
+	};
+}
+
 export class RYMUpdater {
 	private rymFilename: string;
 	private itemUpdates: ItemUpdates;
@@ -26,48 +68,6 @@ export class RYMUpdater {
 		this.itemUpdates = {
 			newItems: [],
 			updatedItems: [],
-		};
-	}
-
-	private doesItemMatch(sourceItem: RYMItem, collectionItem: Item): boolean {
-		const sourceArtist = sourceItem['First Name']
-			? `${sourceItem['First Name']} ${sourceItem['Last Name']}`
-			: sourceItem['Last Name'];
-		return (
-			sourceItem['RYM Album'] === collectionItem.RYMID ||
-			(sourceArtist === collectionItem.Artist && sourceItem.Title === collectionItem.Title)
-		);
-	}
-
-	private itemDiff(sourceItem: RYMItem, collectionItem: Item): ItemDiff {
-		const isDateDifferent = sourceItem.Release_Date !== collectionItem.ReleaseDate;
-		const isRatingDifferent = sourceItem.Rating !== collectionItem.Rating;
-		return {
-			identifier: {
-				idType: 'rymId',
-				value: sourceItem['RYM Album'],
-			},
-			oldData: {
-				ReleaseDate: isDateDifferent ? collectionItem.ReleaseDate : undefined,
-				Rating: isRatingDifferent ? collectionItem.Rating : undefined,
-			},
-			newData: {
-				ReleaseDate: isDateDifferent ? sourceItem.Release_Date : undefined,
-				Rating: isRatingDifferent ? sourceItem.Rating : undefined,
-			},
-		};
-	}
-
-	private newItem(sourceItem: RYMItem): Item {
-		const sourceArtist = sourceItem['First Name']
-			? `${sourceItem['First Name']} ${sourceItem['Last Name']}`
-			: sourceItem['Last Name'];
-		return {
-			Artist: sourceArtist,
-			Title: sourceItem.Title,
-			ReleaseDate: sourceItem.Release_Date,
-			RYMID: sourceItem['RYM Album'],
-			Rating: sourceItem.Rating,
 		};
 	}
 
@@ -81,13 +81,13 @@ export class RYMUpdater {
 				let record: RYMItem;
 				while ((record = parser.read() as RYMItem)) {
 					const matchingCollectionItem = this.collection.find((collectionItem) =>
-						this.doesItemMatch(record, collectionItem)
+						doesItemMatch(record, collectionItem)
 					);
 					if (matchingCollectionItem) {
-						this.itemUpdates.updatedItems.push(this.itemDiff(record, matchingCollectionItem));
+						this.itemUpdates.updatedItems.push(itemDiff(record, matchingCollectionItem));
 					} else {
 						// console.log(record.Title);
-						this.itemUpdates.newItems.push(this.newItem(record));
+						this.itemUpdates.newItems.push(newItem(record));
 					}
 				}
 			});
