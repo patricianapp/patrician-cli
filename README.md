@@ -7,6 +7,7 @@ Updates your music collection CSV file ([example](https://github.com/FOSSforlife
 ```bash
  patrician update # Updates from all sources
  patrician update {rym,lastfm,...} # Updates from the specified source
+ patrician update playcounts # Updates Last.fm/ListenBrainz play counts for all albums
  patrician add [album name or URL] # Coming soon!
  patrician addnp # Adds the currently playing album. Coming soon!
 ```
@@ -16,9 +17,10 @@ Updates your music collection CSV file ([example](https://github.com/FOSSforlife
 - [x] Last.fm
 - [x] RateYourMusic
 - [ ] Spotify
+- [ ] ListenBrainz
 - [ ] Discogs
 - [ ] Beets
-- [ ] iTunes
+- [ ] iTunes/Apple Music
 - [ ] MusicBee
 - [ ] MediaMonkey
 - [ ] foobar2000

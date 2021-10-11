@@ -25,12 +25,18 @@ export interface Identifier {
 	value: string;
 }
 
+export interface FieldUpdate {
+	field: keyof Item;
+	oldValue?: string;
+	newValue: string;
+}
+
 export interface SingleItemUpdates {
 	matchingIdentifier: Identifier['idType'];
 	identifiers: Array<Identifier>;
 	source: Source;
-	oldData: Partial<Item>;
-	newData: Partial<Item>;
+	item: Item;
+	updates: Array<FieldUpdate>;
 }
 
 export interface ItemUpdates {

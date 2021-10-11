@@ -46,8 +46,8 @@ export function updateItemInPlaceIfMatching(sourceItem: IAlbum, collectionItem: 
 			},
 		],
 		source: 'lastfm',
-		oldData,
-		newData,
+		updates: [],
+		item: collectionItem,
 	};
 }
 

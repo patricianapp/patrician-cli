@@ -1,6 +1,7 @@
-import { CliConfig, Collection, Identifier, Item, SingleItemUpdates, ItemUpdates } from '../types';
+import { CliConfig, Collection, Identifier, Item, SingleItemUpdates, ItemUpdates, FieldUpdate } from '../types';
 import csvParse from 'csv-parse';
 import fs from 'fs';
+import inquirer, { CheckboxChoiceOptions } from 'inquirer';
 
 interface RYMItem {
 	'RYM Album': string;
@@ -17,21 +18,20 @@ interface RYMItem {
 	Review: string;
 }
 
-export function updateItemInPlaceIfMatching(sourceItem: RYMItem, collectionItem: Item): SingleItemUpdates | null {
+export function getItemUpdates(sourceItem: RYMItem, collectionItem: Item): SingleItemUpdates | null {
 	const sourceArtist = sourceItem['First Name']
 		? `${sourceItem['First Name']} ${sourceItem['Last Name']}`
 		: sourceItem['Last Name'];
 
 	let matchingIdentifier: Identifier['idType'];
-	const oldData: Partial<Item> = {};
-	const newData: Partial<Item> = {};
+	const updates: Array<FieldUpdate> = [];
 
 	if (
 		sourceArtist.toLowerCase() === collectionItem.Artist.toLowerCase() &&
 		sourceItem.Title.toLowerCase() === collectionItem.Title.toLowerCase()
 	) {
 		matchingIdentifier = 'artist-title';
-		newData.RYMID = sourceItem['RYM Album'];
+		collectionItem.RYMID = sourceItem['RYM Album'];
 	} else if (sourceItem['RYM Album'] === collectionItem.RYMID) {
 		matchingIdentifier = 'rymId';
 	} else {
@@ -39,18 +39,24 @@ export function updateItemInPlaceIfMatching(sourceItem: RYMItem, collectionItem:
 	}
 
 	if (sourceItem.Release_Date !== collectionItem.ReleaseDate) {
-		oldData.ReleaseDate = collectionItem.ReleaseDate;
-		newData.ReleaseDate = sourceItem.Release_Date;
+		updates.push({
+			field: 'ReleaseDate',
+			oldValue: collectionItem.ReleaseDate,
+			newValue: sourceItem.Release_Date,
+		});
 	}
 	if (sourceItem.Rating !== collectionItem.Rating) {
-		oldData.Rating = collectionItem.Rating;
-		newData.Rating = sourceItem.Rating;
+		updates.push({
+			field: 'Rating',
+			oldValue: collectionItem.Rating,
+			newValue: sourceItem.Rating,
+		});
 	}
 
 	// for now, just replace with new data
-	for (const [field, value] of Object.entries(newData)) {
-		collectionItem[field as keyof Item] = value;
-	}
+	// for (const [field, value] of Object.entries(newData)) {
+	// 	collectionItem[field as keyof Item] = value;
+	// }
 
 	return {
 		matchingIdentifier,
@@ -65,8 +71,8 @@ export function updateItemInPlaceIfMatching(sourceItem: RYMItem, collectionItem:
 			},
 		],
 		source: 'rym',
-		oldData,
-		newData,
+		item: collectionItem,
+		updates,
 	};
 }
 
@@ -81,6 +87,18 @@ export function newItem(sourceItem: RYMItem): Item {
 		RYMID: sourceItem['RYM Album'],
 		Rating: sourceItem.Rating,
 	};
+}
+
+export function updatedItemsCheckboxes(itemUpdates: Array<SingleItemUpdates>): Array<CheckboxChoiceOptions> {
+	return itemUpdates.flatMap((itemUpdate) =>
+		itemUpdate.updates.map((fieldUpdate) => ({
+			name: `${itemUpdate.item.Artist} - ${itemUpdate.item.Title}: Update ${fieldUpdate.field} from ${fieldUpdate.oldValue} to ${fieldUpdate.newValue}`,
+			value: {
+				...itemUpdate,
+				updates: [fieldUpdate],
+			},
+		}))
+	);
 }
 
 export class RYMUpdater {
@@ -107,7 +125,7 @@ export class RYMUpdater {
 					let singleItemUpdates: SingleItemUpdates | null = null;
 
 					for (const collectionItem of this.collection) {
-						singleItemUpdates = updateItemInPlaceIfMatching(record, collectionItem);
+						singleItemUpdates = getItemUpdates(record, collectionItem);
 						if (singleItemUpdates !== null) {
 							break;
 						}
@@ -116,13 +134,46 @@ export class RYMUpdater {
 					if (singleItemUpdates) {
 						this.itemUpdates.updatedItems.push(singleItemUpdates);
 					} else {
-						this.collection.push(newItem(record));
+						// this.collection.push(newItem(record));
 						this.itemUpdates.newItems.push(newItem(record));
 					}
 				}
 			});
 
-			parser.on('end', () => {
+			parser.on('end', async () => {
+				console.log(
+					`Found ${this.itemUpdates.newItems.length} new albums, ${this.itemUpdates.updatedItems.length} updates.`
+				);
+				const promptResponses = await inquirer.prompt([
+					{
+						type: 'checkbox',
+						name: 'import-albums-select',
+						message: `\nSelect new albums to import:`,
+						choices: this.itemUpdates.newItems.map((item) => ({
+							name: `${item.Artist} - ${item.Title}`,
+							value: item,
+						})),
+					},
+					{
+						type: 'checkbox',
+						name: 'updates-select',
+						message: `\nSelect updates to apply:`,
+						choices: updatedItemsCheckboxes(this.itemUpdates.updatedItems),
+					},
+				]);
+
+				const newItemsToAdd = promptResponses['import-albums-select'];
+				this.collection.push(...newItemsToAdd);
+
+				const itemsToUpdate = promptResponses['updates-select'];
+				for (const itemUpdate of itemsToUpdate) {
+					const singleItemUpdate = itemUpdate as SingleItemUpdates;
+
+					// Remember, each field update now exists in a separate singleItemUpdate due to the way updatedItemsCheckboxes() works
+					const fieldUpdate = singleItemUpdate.updates[0];
+					singleItemUpdate.item[fieldUpdate.field] = fieldUpdate.newValue;
+				}
+
 				resolve({ itemUpdates: this.itemUpdates });
 			});
 
