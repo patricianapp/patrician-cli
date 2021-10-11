@@ -1,13 +1,13 @@
-import { CliConfig, Collection, Identifier, Item, ItemUpdates, SingleItemUpdates } from '../types';
+import { CliConfig, Collection, FieldUpdate, Identifier, Item, ItemUpdates, SingleItemUpdates } from '../types';
 import LastFm from '@toplast/lastfm';
 import { IAlbum } from '@toplast/lastfm/lib/common/common.interface';
 import fs from 'fs';
 import { createAmazonFilter, MetadataFilter } from 'metadata-filter';
+import inquirer, { CheckboxChoiceOptions } from 'inquirer';
 
-export function updateItemInPlaceIfMatching(sourceItem: IAlbum, collectionItem: Item): SingleItemUpdates | null {
+export function getItemUpdates(sourceItem: IAlbum, collectionItem: Item): SingleItemUpdates | null {
 	let matchingIdentifier: Identifier['idType'];
-	const oldData: Partial<Item> = {};
-	const newData: Partial<Item> = {};
+	const updates: Array<FieldUpdate> = [];
 
 	if (!sourceItem.artist) {
 		return null;
@@ -21,16 +21,19 @@ export function updateItemInPlaceIfMatching(sourceItem: IAlbum, collectionItem: 
 		sourceItem.name.toLowerCase() === collectionItem.Title.toLowerCase()
 	) {
 		matchingIdentifier = 'artist-title';
-		newData.MBID = sourceItem.mbid;
-	} else if (sourceItem.mbid === collectionItem.MBID) {
+		collectionItem.MBID = sourceItem.mbid;
+	} else if (sourceItem.mbid && sourceItem.mbid === collectionItem.MBID) {
 		matchingIdentifier = 'mbid';
 	} else {
 		return null;
 	}
 
-	newData.Plays = sourceItem.playcount;
-	for (const [field, value] of Object.entries(newData)) {
-		collectionItem[field as keyof Item] = value;
+	if (sourceItem.playcount && sourceItem.playcount !== collectionItem.Plays) {
+		updates.push({
+			field: 'Plays',
+			oldValue: collectionItem.Plays,
+			newValue: sourceItem.playcount,
+		});
 	}
 
 	return {
@@ -46,7 +49,7 @@ export function updateItemInPlaceIfMatching(sourceItem: IAlbum, collectionItem: 
 			},
 		],
 		source: 'lastfm',
-		updates: [],
+		updates,
 		item: collectionItem,
 	};
 }
@@ -59,6 +62,20 @@ export function newItem(sourceItem: IAlbum): Item {
 		MBID: mbid,
 		Plays: playcount,
 	};
+}
+
+export function updatedItemsCheckboxes(itemUpdates: Array<SingleItemUpdates>): Array<CheckboxChoiceOptions> {
+	return itemUpdates.flatMap((itemUpdate) =>
+		itemUpdate.updates.map((fieldUpdate) => ({
+			name: `${itemUpdate.item.Artist} - ${itemUpdate.item.Title}: Update ${fieldUpdate.field} ${
+				fieldUpdate.oldValue ? `from ${fieldUpdate.oldValue} ` : ''
+			}to ${fieldUpdate.newValue}`,
+			value: {
+				...itemUpdate,
+				updates: [fieldUpdate],
+			},
+		}))
+	);
 }
 
 export class LastFmUpdater {
@@ -76,11 +93,13 @@ export class LastFmUpdater {
 	}
 
 	async update(): Promise<{ itemUpdates: ItemUpdates }> {
+		console.log('Fetching top albums from Last.fm...');
 		const lastFm = new LastFm(this.lastfmConfig.apiKey);
 
 		let continueFetching = true;
 		let page = 1;
 		while (continueFetching) {
+			console.log(page);
 			// const albums = await lastFm.user.getTopAlbums({ user: this.lastfmConfig.username, page });
 			const albums = {
 				// Use cache for testing
@@ -96,7 +115,7 @@ export class LastFmUpdater {
 					album.name = this.metadataFilter.filterField('album', album.name).trim();
 				}
 				for (const collectionItem of this.collection) {
-					singleItemUpdates = updateItemInPlaceIfMatching(album, collectionItem);
+					singleItemUpdates = getItemUpdates(album, collectionItem);
 					if (singleItemUpdates !== null) {
 						break;
 					}
@@ -104,7 +123,6 @@ export class LastFmUpdater {
 				if (singleItemUpdates) {
 					this.itemUpdates.updatedItems.push(singleItemUpdates);
 				} else {
-					this.collection.push(newItem(album));
 					this.itemUpdates.newItems.push(newItem(album));
 				}
 				if (Number(album.playcount) < this.lastfmConfig.playsThreshold) {
@@ -112,6 +130,42 @@ export class LastFmUpdater {
 				}
 			}
 			page++;
+		}
+
+		console.log(
+			`Last.fm: Found ${this.itemUpdates.newItems.length} new albums, ${this.itemUpdates.updatedItems.length} updates.`
+		);
+
+		const promptResponses = await inquirer.prompt([
+			{
+				type: 'checkbox',
+				name: 'import-albums-select',
+				message: `\nSelect new albums to import:`,
+				choices: this.itemUpdates.newItems.map((item) => ({
+					name: `${item.Artist} - ${item.Title} (${item.Plays} plays)`,
+					value: item,
+				})),
+				loop: false,
+			},
+			{
+				type: 'checkbox',
+				name: 'updates-select',
+				message: `\nSelect updates to apply:`,
+				choices: updatedItemsCheckboxes(this.itemUpdates.updatedItems),
+				loop: false,
+			},
+		]);
+
+		const newItemsToAdd = promptResponses['import-albums-select'];
+		this.collection.push(...newItemsToAdd);
+
+		const itemsToUpdate = promptResponses['updates-select'];
+		for (const itemUpdate of itemsToUpdate) {
+			const singleItemUpdate = itemUpdate as SingleItemUpdates;
+
+			// Remember, each field update now exists in a separate singleItemUpdate due to the way updatedItemsCheckboxes() works
+			const fieldUpdate = singleItemUpdate.updates[0];
+			singleItemUpdate.item[fieldUpdate.field] = fieldUpdate.newValue;
 		}
 
 		return { itemUpdates: this.itemUpdates };

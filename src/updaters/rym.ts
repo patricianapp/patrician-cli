@@ -38,25 +38,20 @@ export function getItemUpdates(sourceItem: RYMItem, collectionItem: Item): Singl
 		return null;
 	}
 
-	if (sourceItem.Release_Date !== collectionItem.ReleaseDate) {
+	if (sourceItem.Release_Date !== collectionItem.ReleaseDate?.slice(0, 4)) {
 		updates.push({
 			field: 'ReleaseDate',
 			oldValue: collectionItem.ReleaseDate,
 			newValue: sourceItem.Release_Date,
 		});
 	}
-	if (sourceItem.Rating !== collectionItem.Rating) {
+	if (sourceItem.Rating !== '0' && sourceItem.Rating !== collectionItem.Rating) {
 		updates.push({
 			field: 'Rating',
 			oldValue: collectionItem.Rating,
 			newValue: sourceItem.Rating,
 		});
 	}
-
-	// for now, just replace with new data
-	// for (const [field, value] of Object.entries(newData)) {
-	// 	collectionItem[field as keyof Item] = value;
-	// }
 
 	return {
 		matchingIdentifier,
@@ -92,7 +87,9 @@ export function newItem(sourceItem: RYMItem): Item {
 export function updatedItemsCheckboxes(itemUpdates: Array<SingleItemUpdates>): Array<CheckboxChoiceOptions> {
 	return itemUpdates.flatMap((itemUpdate) =>
 		itemUpdate.updates.map((fieldUpdate) => ({
-			name: `${itemUpdate.item.Artist} - ${itemUpdate.item.Title}: Update ${fieldUpdate.field} from ${fieldUpdate.oldValue} to ${fieldUpdate.newValue}`,
+			name: `${itemUpdate.item.Artist} - ${itemUpdate.item.Title}: Update ${fieldUpdate.field} ${
+				fieldUpdate.oldValue ? `from ${fieldUpdate.oldValue} ` : ''
+			}to ${fieldUpdate.newValue}`,
 			value: {
 				...itemUpdate,
 				updates: [fieldUpdate],
@@ -115,6 +112,7 @@ export class RYMUpdater {
 
 	async update(): Promise<{ itemUpdates: ItemUpdates }> {
 		return new Promise((resolve, reject) => {
+			console.log('Importing from RateYourMusic file...');
 			const readStream = fs.createReadStream(this.rymFilename);
 			const parser = csvParse({ columns: true, delimiter: ',', quote: '"', ltrim: true, rtrim: true });
 
@@ -142,7 +140,7 @@ export class RYMUpdater {
 
 			parser.on('end', async () => {
 				console.log(
-					`Found ${this.itemUpdates.newItems.length} new albums, ${this.itemUpdates.updatedItems.length} updates.`
+					`RateYourMusic: Found ${this.itemUpdates.newItems.length} new albums, ${this.itemUpdates.updatedItems.length} updates.`
 				);
 				const promptResponses = await inquirer.prompt([
 					{
@@ -153,12 +151,14 @@ export class RYMUpdater {
 							name: `${item.Artist} - ${item.Title}`,
 							value: item,
 						})),
+						loop: false,
 					},
 					{
 						type: 'checkbox',
 						name: 'updates-select',
 						message: `\nSelect updates to apply:`,
 						choices: updatedItemsCheckboxes(this.itemUpdates.updatedItems),
+						loop: false,
 					},
 				]);
 
