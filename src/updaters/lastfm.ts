@@ -4,6 +4,7 @@ import { IAlbum } from '@toplast/lastfm/lib/common/common.interface';
 import fs from 'fs';
 import { createAmazonFilter, MetadataFilter } from 'metadata-filter';
 import inquirer, { CheckboxChoiceOptions } from 'inquirer';
+import chalk from 'chalk';
 
 export function getItemUpdates(sourceItem: IAlbum, collectionItem: Item): SingleItemUpdates | null {
 	let matchingIdentifier: Identifier['idType'];
@@ -93,13 +94,12 @@ export class LastFmUpdater {
 	}
 
 	async update(): Promise<{ itemUpdates: ItemUpdates }> {
-		console.log('Fetching top albums from Last.fm...');
 		const lastFm = new LastFm(this.lastfmConfig.apiKey);
 
 		let continueFetching = true;
 		let page = 1;
 		while (continueFetching) {
-			console.log(page);
+			console.log(`${chalk.bold(chalk.red('Last.fm:'))} Fetching top albums, page ${page}...`);
 			// const albums = await lastFm.user.getTopAlbums({ user: this.lastfmConfig.username, page });
 			const albums = {
 				// Use cache for testing
@@ -133,14 +133,16 @@ export class LastFmUpdater {
 		}
 
 		console.log(
-			`Last.fm: Found ${this.itemUpdates.newItems.length} new albums, ${this.itemUpdates.updatedItems.length} updates.`
+			`${chalk.bold(chalk.red('Last.fm:'))} Found ${this.itemUpdates.newItems.length} new albums, ${
+				this.itemUpdates.updatedItems.length
+			} updates.`
 		);
 
 		const promptResponses = await inquirer.prompt([
 			{
 				type: 'checkbox',
 				name: 'import-albums-select',
-				message: `\nSelect new albums to import:`,
+				message: `Select new albums to import:`,
 				choices: this.itemUpdates.newItems.map((item) => ({
 					name: `${item.Artist} - ${item.Title} (${item.Plays} plays)`,
 					value: item,
@@ -150,7 +152,7 @@ export class LastFmUpdater {
 			{
 				type: 'checkbox',
 				name: 'updates-select',
-				message: `\nSelect updates to apply:`,
+				message: `Select updates to apply:`,
 				choices: updatedItemsCheckboxes(this.itemUpdates.updatedItems),
 				loop: false,
 			},

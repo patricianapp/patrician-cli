@@ -2,6 +2,7 @@ import { CliConfig, Collection, Identifier, Item, SingleItemUpdates, ItemUpdates
 import csvParse from 'csv-parse';
 import fs from 'fs';
 import inquirer, { CheckboxChoiceOptions } from 'inquirer';
+import chalk from 'chalk';
 
 interface RYMItem {
 	'RYM Album': string;
@@ -112,7 +113,7 @@ export class RYMUpdater {
 
 	async update(): Promise<{ itemUpdates: ItemUpdates }> {
 		return new Promise((resolve, reject) => {
-			console.log('Importing from RateYourMusic file...');
+			console.log(`${chalk.bold(chalk.cyan('RateYourMusic:'))} Importing from text file...`);
 			const readStream = fs.createReadStream(this.rymFilename);
 			const parser = csvParse({ columns: true, delimiter: ',', quote: '"', ltrim: true, rtrim: true });
 
@@ -140,13 +141,15 @@ export class RYMUpdater {
 
 			parser.on('end', async () => {
 				console.log(
-					`RateYourMusic: Found ${this.itemUpdates.newItems.length} new albums, ${this.itemUpdates.updatedItems.length} updates.`
+					`${chalk.bold(chalk.cyan('RateYourMusic:'))} Found ${this.itemUpdates.newItems.length} new albums, ${
+						this.itemUpdates.updatedItems.length
+					} updates.`
 				);
 				const promptResponses = await inquirer.prompt([
 					{
 						type: 'checkbox',
 						name: 'import-albums-select',
-						message: `\nSelect new albums to import:`,
+						message: `Select new albums to import:`,
 						choices: this.itemUpdates.newItems.map((item) => ({
 							name: `${item.Artist} - ${item.Title}`,
 							value: item,
@@ -156,7 +159,7 @@ export class RYMUpdater {
 					{
 						type: 'checkbox',
 						name: 'updates-select',
-						message: `\nSelect updates to apply:`,
+						message: `Select updates to apply:`,
 						choices: updatedItemsCheckboxes(this.itemUpdates.updatedItems),
 						loop: false,
 					},

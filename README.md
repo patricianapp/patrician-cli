@@ -8,7 +8,7 @@ Updates your music collection CSV file ([example](https://github.com/FOSSforlife
  patrician update # Updates from all sources
  patrician update {rym,lastfm,...} # Updates from the specified source
  patrician update playcounts # Updates Last.fm/ListenBrainz play counts for all albums
- patrician add [album name or URL] # Coming soon!
+ patrician add [album name, mbid, or URL] # Coming soon!
  patrician addnp # Adds the currently playing album. Coming soon!
 ```
 
